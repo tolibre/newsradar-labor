@@ -15,6 +15,8 @@
   원본 값 그대로 쓴다(김광일판과 같음).
 """
 import hashlib, os, re, shutil, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import social_team as ST   # 사회정책팀 휴일 특근 묶음(세 저장소 공용 사본)
 
 # ---------------------------------------------------------------- 설정값 ---
 REPORTER = "김동빈"                       # 노컷 원문 author 메타 'CBS노컷뉴스 김동빈 기자'로 가정 — 첫 실행 로그로 확인할 것
@@ -44,6 +46,7 @@ NEW_GROUPS_LINE = ("KEYWORD_GROUPS.update(DUTY_KEYWORD_GROUPS)\n"
                    "                       '노동장관': '노동부', '노동차관': '노동부'})   # 노동판(생성기)\n")
 # 단어 일부 오매칭 예방: '고용부진·고용부담·고용부문·고용부족·고용부채'(경제 기사에 흔함),
 # '노동신문'·'조선노동당'(북한), '노동당'(단, '노동당국'은 노동 사안이라 남긴다), 매체명 '매일노동뉴스'.
+# (0-67부터 안 씀 — 오탐 규칙은 tools/social_team.py의 ANTI가 팀 전체 몫으로 넣는다)
 NEW_ANTI = ('    "개인정보위": [],\n'
             '    "고용부":   [r"고용부진", r"고용부담", r"고용부문", r"고용부족", r"고용부채"],   # 노동판(생성기)\n'
             '    "노동":     [r"노동신문", r"조선노동당", r"노동당(?!국)", r"매일노동뉴스"],   # 노동판(생성기)\n')
@@ -56,14 +59,10 @@ NM = "news_monitor.py"
 RP = "render_page.py"
 
 REPLACEMENTS = [
-    # ---- news_monitor.py: 제목 판정 전용 약칭은 네이버 검색 안 함 ----
-    (NM, 'KEYWORD_MAX_PAGES = {\n    "CBS": 1,\n}\n',
-         'KEYWORD_MAX_PAGES = {\n    "CBS": 1,\n    "노동장관": 0, "노동차관": 0,   # 노동판(생성기) — 제목 판정 전용\n}\n', 1, False),
     # ---- news_monitor.py: 출입처 ----
-    # 0-44: 원본은 당직 출입처 8곳을 날마다 따로 수집한다(알림 없음, 뉴스레이다 '당직' 스위치로만 봄).
-    # 노동판은 기본으로 끈다(0-47 교훈: 켜기 전에 그 기자가 경제정책팀 당직을 서는지 확인할 것).
-    (NM, "DUTY_COLLECT = True\n",
-         "DUTY_COLLECT = False   # 노동판은 당직 수집을 하지 않는다(생성기)\n", 1, False),
+    # 0-44·0-67: 휴일 특근 — 원본은 경제정책팀 8곳을 당직으로 모은다. 사회정책팀 판은 그 묶음을 팀 묶음(social_team.py)으로
+    # 바꾸고 DUTY_COLLECT는 원본 값(True) 그대로 둔다(사용자 10/22 "세 명을 그룹화해서 휴일 당직 기능을 만들자").
+    *ST.replacements(NM),
     # 0-46: 원본의 EXCLUDE_TERMS(대한체육회·스포츠공정위·모의공정위)는 '공정위' 검색어 오탐용이다. 이 판은 '공정위'를
     # 검색하지 않으니 끈다(기후·문체판 0-46과 같음).
     (NM, r"EXCLUDE_TERMS = \[\n(?:.*\n)*?\]\n",
@@ -71,7 +70,6 @@ REPLACEMENTS = [
     (NM, r"BASE_KEYWORDS = \[\n(?:.*\n)*?\]\n", NEW_BASE_KEYWORDS, 1, True),
     (NM, 'TEMP_KEYWORDS = {\n    "대미투자": "2026-09-23",\n}\n', "TEMP_KEYWORDS = {}\n", 1, False),
     (NM, "KEYWORD_GROUPS.update(DUTY_KEYWORD_GROUPS)\n", NEW_GROUPS_LINE, 1, False),
-    (NM, '    "개인정보위": [],\n', NEW_ANTI, 1, False),
     # ---- news_monitor.py: 보관 기간 ----
     # 첫 실행 실측(10/22 15:06, 1,865건): 네이버 '노동' 500건이 약 27시간·'고용노동부'·'노동부' 500건이 약 24시간을 덮음 →
     # 하루 1,000~1,500건, 다른 판과 비슷 → 같은 45일. 처음엔 '노동'이 흔한 말이라 30일로 시작했다.
@@ -117,7 +115,8 @@ FORBIDDEN = {
 }
 # 생성한 news_monitor.py를 별도 프로세스로 import해 확인할 값(당직·임시 키워드가 꺼진 날짜 기준).
 EXPECT = {
-    "DUTY_ONLY_GROUPS": [],   # 0-44 — 당직 수집 꺼짐(경제정책팀 아님)
+    "DUTY_ONLY_GROUPS": ST.duty_only(GROUPS),   # 0-67 — 사회정책팀 묶음 중 이 판 섹션이 아닌 것
+    "DUTY_COLLECT": True,
     "EXCLUDE_TERMS": [],      # 0-46 — 공정위 오탐용 제외어 꺼짐
     "KEYWORDS": ["고용노동부", "노동부", "고용부", "노동장관", "노동차관", "노동"],
     "GROUP_ORDER": GROUPS,
