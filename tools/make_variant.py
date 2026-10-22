@@ -73,8 +73,9 @@ REPLACEMENTS = [
     (NM, "KEYWORD_GROUPS.update(DUTY_KEYWORD_GROUPS)\n", NEW_GROUPS_LINE, 1, False),
     (NM, '    "개인정보위": [],\n', NEW_ANTI, 1, False),
     # ---- news_monitor.py: 보관 기간 ----
-    # 기사량은 첫 실행 전엔 모른다. '노동'은 본문에 아주 흔한 말이라 다른 판보다 많을 것 — 30일로 시작해 첫 실행 실측 뒤 조정(GitHub 100MB 한도).
-    (NM, "RETENTION_DAYS = 90 ", "RETENTION_DAYS = 30 ", 1, False),
+    # 첫 실행 실측(10/22 15:06, 1,865건): 네이버 '노동' 500건이 약 27시간·'고용노동부'·'노동부' 500건이 약 24시간을 덮음 →
+    # 하루 1,000~1,500건, 다른 판과 비슷 → 같은 45일. 처음엔 '노동'이 흔한 말이라 30일로 시작했다.
+    (NM, "RETENTION_DAYS = 90 ", "RETENTION_DAYS = 45 ", 1, False),
     # ---- news_monitor.py: 기관장 이름 씨앗(원본 0-38 자리) ----
     (NM, "ACTOR_PEOPLE_SEED = {}\n", f"ACTOR_PEOPLE_SEED = {SEED!r}   # 노동판(생성기)\n", 1, False),
     # ---- news_monitor.py: 바이라인(본인 기사 섹션) ----
@@ -120,7 +121,7 @@ EXPECT = {
     "EXCLUDE_TERMS": [],      # 0-46 — 공정위 오탐용 제외어 꺼짐
     "KEYWORDS": ["고용노동부", "노동부", "고용부", "노동장관", "노동차관", "노동"],
     "GROUP_ORDER": GROUPS,
-    "RETENTION_DAYS": 30,
+    "RETENTION_DAYS": 45,
     "BYLINE_NAME": REPORTER,
     "BYLINE_SECTION": f"{REPORTER} 기자",
     "ACTOR_ASSIGN": True,
